@@ -36,9 +36,12 @@ export async function generateWithLLM(templateConfigName, promptData = {}) {
   // Determine which prompt renderer to use based on template name
   const isCharacterTemplate = templateConfigName.includes('character');
   const isEvaluationTemplate = templateConfigName.includes('evaluation');
+  const isCharacterEvaluation = isCharacterTemplate && isEvaluationTemplate;
   
   let renderPrompt;
-  if (isEvaluationTemplate) {
+  if (isCharacterEvaluation) {
+    renderPrompt = renderCharacterPrompt;
+  } else if (isEvaluationTemplate) {
     renderPrompt = renderLocationEvaluationPrompt;
   } else if (isCharacterTemplate) {
     renderPrompt = renderCharacterPrompt;
@@ -49,13 +52,15 @@ export async function generateWithLLM(templateConfigName, promptData = {}) {
   // Get prompts from template files
   const systemPrompt = systemPromptTemplate 
     ? renderPrompt(systemPromptTemplate, promptData)
-    : renderPrompt(isEvaluationTemplate ? 'locationEvaluation.system' : 
+    : renderPrompt(isCharacterEvaluation ? 'characterEvaluation.system' :
+                   isEvaluationTemplate ? 'locationEvaluation.system' : 
                    isCharacterTemplate ? 'characterDescription.system' : 
                    'locationDescription.system', promptData);
   
   const userPrompt = userPromptTemplate
     ? renderPrompt(userPromptTemplate, promptData)
-    : renderPrompt(isEvaluationTemplate ? 'locationEvaluation.user' : 
+    : renderPrompt(isCharacterEvaluation ? 'characterEvaluation.user' :
+                   isEvaluationTemplate ? 'locationEvaluation.user' : 
                    isCharacterTemplate ? 'characterDescription.user' : 
                    'locationDescription.user', promptData);
 

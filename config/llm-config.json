@@ -38,6 +38,14 @@
     "system_prompt": "locationEvaluation.system",
     "user_prompt": "locationEvaluation.user",
     "max_tokens": 500
+  },
+  {
+    "template_name": "character_description_evaluation",
+    "model": "llama-3.3-70b-versatile",
+    "temperature": 0.3,
+    "system_prompt": "characterEvaluation.system",
+    "user_prompt": "characterEvaluation.user",
+    "max_tokens": 500
   }
 ]
 

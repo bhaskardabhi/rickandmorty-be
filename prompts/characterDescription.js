@@ -105,6 +105,71 @@ Provide a detailed analysis in three sections. Each section should be a JSON arr
 
 Make it engaging, funny, and true to the Rick and Morty style. Return ONLY the JSON object, no additional text.`,
   },
+  
+  characterEvaluation: {
+    system: `You are an expert evaluator of character descriptions in the Rick and Morty universe. You analyze descriptions for accuracy, completeness, and quality based on your knowledge of Rick and Morty lore and the provided character data. You provide objective, detailed evaluations.`,
+    
+    user: `Evaluate the following character description for quality and accuracy.
+
+Character Information:
+- Name: {{characterName}}
+- Status: {{characterStatus}}
+- Species: {{characterSpecies}}
+- Type: {{characterType}}{{characterTypeNote}}
+- Gender: {{characterGender}}
+- Origin: {{characterOrigin}}{{originNote}}
+- Current Location: {{characterLocation}}{{locationNote}}
+
+Visual Appearance:
+{{visualAppearance}}
+
+Location Information:
+- Name: {{locationName}}{{locationNameNote}}
+- Type: {{locationType}}{{locationTypeNote}}
+- Dimension: {{locationDimension}}{{dimensionNote}}
+
+Episodes ({{episodesCount}} total, showing latest 10):
+{{episodesList}}
+
+Generated Description:
+{{description}}
+
+Evaluate the description and return ONLY a valid JSON object in this exact format:
+{
+  "checks": {
+    "nameMentioned": true/false,
+    "statusMentioned": true/false,
+    "speciesMentioned": true/false,
+    "typeMentioned": true/false,
+    "genderMentioned": true/false,
+    "originMentioned": true/false,
+    "locationMentioned": true/false,
+    "visualAppearanceMentioned": true/false
+  },
+  "qualityChecks": {
+    "hasEpisodeContext": true/false,
+    "hasLocationContext": true/false,
+    "hasRickAndMortyStyle": true/false,
+    "hasCharacterDepth": true/false
+  },
+  "autoScore": number (0-10),
+  "explanation": "Brief explanation of the score"
+}
+
+Scoring Guidelines:
+- Name mentioned: 2 points (most important)
+- Status mentioned: 1 point
+- Species mentioned: 1 point
+- Type mentioned: 0.5 points (only if type is not "Unknown")
+- Gender mentioned: 0.5 points
+- Origin mentioned: 1 point (only if origin is not "Unknown")
+- Location mentioned: 1 point (only if location is not "Unknown")
+- Visual appearance mentioned: 1 point
+- Quality indicators: up to 2 bonus points (episode context: 0.5, location context: 0.5, Rick & Morty style: 0.5, character depth: 0.5)
+- Maximum score: 10
+
+For "mentioned" checks, consider if the information is clearly present in the description, even if not using exact words. Use semantic understanding. Set typeMentioned, originMentioned, and locationMentioned to false if the corresponding value is "Unknown". Evaluate how well the description matches your knowledge of this character from Rick and Morty lore and the provided data.`,
+  },
 };
 
 /**

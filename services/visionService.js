@@ -18,7 +18,7 @@ const openaiClient = process.env.OPENAI_API_KEY
 
 /**
  * Analyze character image and extract visual appearance details
- * Uses Groq's vision model (llama-3.2-90b-vision-preview) as primary choice
+ * Uses Groq's vision model (meta-llama/llama-4-scout-17b-16e-instruct) as primary choice
  * Falls back to OpenAI if Groq fails
  * @param {string} imageUrl - URL of the character image
  * @param {string} characterName - Name of the character for context
@@ -27,7 +27,7 @@ const openaiClient = process.env.OPENAI_API_KEY
 export async function analyzeCharacterImage(imageUrl, characterName) {
   // Try Groq vision first (primary choice), then OpenAI as fallback
   const clients = [
-    { client: groqClient, model: 'llama-3.2-90b-vision-preview', name: 'Groq' },
+    { client: groqClient, model: 'meta-llama/llama-4-scout-17b-16e-instruct', name: 'Groq' },
   ];
   
   // Add OpenAI as fallback if available

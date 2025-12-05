@@ -80,7 +80,6 @@ You can also use provider-specific environment variables that Litellm will autom
 - `OPENAI_API_KEY` - for OpenAI models
 - `ANTHROPIC_API_KEY` - for Anthropic models
 - `GROQ_API_KEY` - for Groq models
-- `GEMINI_API_KEY` - for Google models
 - `MISTRAL_API_KEY` - for Mistral models
 - `COHERE_API_KEY` - for Cohere models
 

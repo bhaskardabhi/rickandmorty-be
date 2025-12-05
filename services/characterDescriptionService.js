@@ -111,11 +111,23 @@ export async function generateCharacterDescription(characterId) {
   // Step 6: Generate description using LLM service
   try {
     const description = await generateWithLLM(TEMPLATE_CONFIG_NAME, promptData);
-    return description;
+    // Return both the description and metadata for evaluation
+    return {
+      description,
+      characterData,
+      locationData,
+      promptData,
+    };
   } catch (error) {
     // Fallback description if LLM fails
     console.error('LLM generation failed, using fallback:', error);
-    return generateFallbackDescription(characterData, locationData, episodes);
+    const fallbackDescription = generateFallbackDescription(characterData, locationData, episodes);
+    return {
+      description: fallbackDescription,
+      characterData,
+      locationData,
+      promptData,
+    };
   }
 }
 

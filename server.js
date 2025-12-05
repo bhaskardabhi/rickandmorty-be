@@ -6,6 +6,8 @@ import { generateCharacterDescription } from './services/characterDescriptionSer
 import { generateCharacterInsights } from './services/characterInsightsService.js';
 import { generateCharacterCompatibility } from './services/characterCompatibilityService.js';
 import { evaluateLocationDescription } from './services/locationEvaluationService.js';
+import { evaluateCharacterDescription } from './services/characterEvaluationService.js';
+import { semanticSearch } from './services/searchService.js';
 
 console.log('Loading environment variables...');
 dotenv.config();
@@ -85,16 +87,53 @@ app.post('/api/character/:id/description', async (req, res) => {
     const characterId = req.params.id;
 
     // Generate description using vision + LLM (no database caching - frontend handles caching)
-    const description = await generateCharacterDescription(characterId);
+    const result = await generateCharacterDescription(characterId);
 
     res.json({ 
-      description,
+      description: result.description,
       cached: false 
     });
   } catch (error) {
     console.error('Error generating character description:', error);
     res.status(500).json({ 
       error: 'Failed to generate character description',
+      message: error.message 
+    });
+  }
+});
+
+// Evaluate character description endpoint
+app.post('/api/character/:id/evaluate', async (req, res) => {
+  try {
+    const characterId = req.params.id;
+    const { description } = req.body;
+
+    if (!description) {
+      return res.status(400).json({
+        error: 'Missing required parameter',
+        message: 'description is required'
+      });
+    }
+
+    // Generate description to get characterData, locationData, and promptData
+    const result = await generateCharacterDescription(characterId);
+    
+    // Evaluate the provided description using LLM
+    const evaluation = await evaluateCharacterDescription(
+      description,
+      result.characterData,
+      result.locationData,
+      result.promptData
+    );
+
+    res.json({ 
+      evaluation,
+      cached: false 
+    });
+  } catch (error) {
+    console.error('Error evaluating character description:', error);
+    res.status(500).json({ 
+      error: 'Failed to evaluate description',
       message: error.message 
     });
   }
@@ -144,6 +183,34 @@ app.post('/api/compatibility', async (req, res) => {
     console.error('Error generating compatibility analysis:', error);
     res.status(500).json({ 
       error: 'Failed to generate compatibility analysis',
+      message: error.message 
+    });
+  }
+});
+
+// Semantic search endpoint
+app.post('/api/search', async (req, res) => {
+  try {
+    const { query, limit } = req.body;
+
+    if (!query || typeof query !== 'string' || query.trim().length === 0) {
+      return res.status(400).json({
+        error: 'Missing required parameter',
+        message: 'query is required and must be a non-empty string'
+      });
+    }
+
+    const searchLimit = limit && Number.isInteger(limit) && limit > 0 ? limit : 20;
+    const results = await semanticSearch(query.trim(), searchLimit);
+
+    res.json({ 
+      ...results,
+      cached: false 
+    });
+  } catch (error) {
+    console.error('Error performing semantic search:', error);
+    res.status(500).json({ 
+      error: 'Failed to perform search',
       message: error.message 
     });
   }
