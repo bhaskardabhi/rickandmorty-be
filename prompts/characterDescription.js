@@ -89,15 +89,21 @@ Location Context: {{locationName}}
 - Dimension: {{locationDimension}}
 - Residents: {{locationResidentsCount}}
 
-Provide a detailed analysis in three sections:
+Provide a detailed analysis in three sections. Each section should be a JSON array of bullet points (strings). Return ONLY valid JSON in this exact format:
 
-1. TEAM WORK: How well would {{character1Name}} and {{character2Name}} work together as a team? Consider their personalities, skills, backgrounds, and how they complement or clash with each other. Be specific and entertaining.
+{
+  "teamWork": ["point 1", "point 2", "point 3", ...],
+  "conflicts": ["point 1", "point 2", "point 3", ...],
+  "breaksFirst": ["point 1", "point 2", "point 3", ...]
+}
 
-2. CONFLICTS: What would {{character1Name}} and {{character2Name}} fight over? What are their fundamental disagreements, competing interests, or personality clashes? Be creative and true to their characters.
+1. TEAM WORK: Provide 5-8 bullet points about how well {{character1Name}} and {{character2Name}} would work together as a team. Consider their personalities, skills, backgrounds, and how they complement or clash with each other. Each point should be a complete, standalone observation.
 
-3. BREAKS FIRST: Who would break first under pressure, and why? Consider their mental resilience, past experiences, and character traits. Explain the reasoning.
+2. CONFLICTS: Provide 5-8 bullet points about what {{character1Name}} and {{character2Name}} would fight over. Include their fundamental disagreements, competing interests, or personality clashes. Each point should be specific and entertaining.
 
-Make it engaging, funny, and true to the Rick and Morty style.`,
+3. BREAKS FIRST: Provide 3-5 bullet points about who would break first under pressure and why. Consider their mental resilience, past experiences, and character traits. Each point should explain the reasoning.
+
+Make it engaging, funny, and true to the Rick and Morty style. Return ONLY the JSON object, no additional text.`,
   },
 };
 

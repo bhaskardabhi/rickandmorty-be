@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import dotenv from 'dotenv';
 import { renderPrompt as renderLocationPrompt } from '../prompts/locationDescription.js';
 import { renderPrompt as renderCharacterPrompt } from '../prompts/characterDescription.js';
+import { renderPrompt as renderLocationEvaluationPrompt } from '../prompts/locationEvaluation.js';
 import {
   getModelForTemplate,
   getTemperatureForTemplate,
@@ -34,16 +35,29 @@ export async function generateWithLLM(templateConfigName, promptData = {}) {
 
   // Determine which prompt renderer to use based on template name
   const isCharacterTemplate = templateConfigName.includes('character');
-  const renderPrompt = isCharacterTemplate ? renderCharacterPrompt : renderLocationPrompt;
+  const isEvaluationTemplate = templateConfigName.includes('evaluation');
+  
+  let renderPrompt;
+  if (isEvaluationTemplate) {
+    renderPrompt = renderLocationEvaluationPrompt;
+  } else if (isCharacterTemplate) {
+    renderPrompt = renderCharacterPrompt;
+  } else {
+    renderPrompt = renderLocationPrompt;
+  }
   
   // Get prompts from template files
   const systemPrompt = systemPromptTemplate 
     ? renderPrompt(systemPromptTemplate, promptData)
-    : renderPrompt(isCharacterTemplate ? 'characterDescription.system' : 'locationDescription.system', promptData);
+    : renderPrompt(isEvaluationTemplate ? 'locationEvaluation.system' : 
+                   isCharacterTemplate ? 'characterDescription.system' : 
+                   'locationDescription.system', promptData);
   
   const userPrompt = userPromptTemplate
     ? renderPrompt(userPromptTemplate, promptData)
-    : renderPrompt(isCharacterTemplate ? 'characterDescription.user' : 'locationDescription.user', promptData);
+    : renderPrompt(isEvaluationTemplate ? 'locationEvaluation.user' : 
+                   isCharacterTemplate ? 'characterDescription.user' : 
+                   'locationDescription.user', promptData);
 
   try {
     const completionOptions = {

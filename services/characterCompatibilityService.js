@@ -169,77 +169,89 @@ export async function generateCharacterCompatibility(character1Id, character2Id,
 
 function parseCompatibilityAnalysis(analysisText) {
   const result = {
-    teamWork: '',
-    conflicts: '',
-    breaksFirst: '',
+    teamWork: [],
+    conflicts: [],
+    breaksFirst: [],
   };
 
-  // Try multiple patterns to extract sections
-  // Pattern 1: Look for numbered sections or headers
-  const patterns = [
-    // Pattern: "1. TEAM WORK:" or "TEAM WORK:" followed by content
-    {
-      teamWork: /(?:1\.?\s*)?(?:TEAM\s+WORK|Team\s+Work|team\s+work)[:\s]*(.*?)(?=\d+\.?\s*(?:CONFLICT|Conflict|conflict|FIGHT|Fight|fight)|2\.?\s*|CONFLICT|Conflict|conflict|FIGHT|Fight|fight|BREAKS|Breaks|breaks)/is,
-      conflicts: /(?:2\.?\s*)?(?:CONFLICT|Conflict|conflict|FIGHT|Fight|fight|What\s+they['']d\s+fight)[:\s]*(.*?)(?=\d+\.?\s*(?:BREAKS|Breaks|breaks|Who|who)|3\.?\s*|BREAKS|Breaks|breaks|Who|who)/is,
-      breaksFirst: /(?:3\.?\s*)?(?:BREAKS\s+FIRST|Breaks\s+First|breaks\s+first|Who\s+breaks|who\s+breaks)[:\s]*(.*?)$/is,
-    },
-    // Pattern: Look for emoji or symbols followed by section names
-    {
-      teamWork: /(?:🤝|👥|1)[\s\-:]*(?:TEAM|Team|team)[\s\-:]*(?:WORK|Work|work)?[\s\-:]*(.*?)(?=(?:⚔️|⚔|2|CONFLICT|Conflict|conflict|FIGHT|Fight|fight))/is,
-      conflicts: /(?:⚔️|⚔|2)[\s\-:]*(?:CONFLICT|Conflict|conflict|FIGHT|Fight|fight|What)[\s\-:]*(.*?)(?=(?:💥|💣|3|BREAKS|Breaks|breaks|Who|who))/is,
-      breaksFirst: /(?:💥|💣|3)[\s\-:]*(?:BREAKS|Breaks|breaks|Who|who)[\s\-:]*(?:FIRST|First|first)?[\s\-:]*(.*?)$/is,
-    },
-  ];
-
-  for (const pattern of patterns) {
-    const teamMatch = analysisText.match(pattern.teamWork);
-    const conflictMatch = analysisText.match(pattern.conflicts);
-    const breaksMatch = analysisText.match(pattern.breaksFirst);
-
-    if (teamMatch && conflictMatch && breaksMatch) {
-      result.teamWork = teamMatch[1].trim();
-      result.conflicts = conflictMatch[1].trim();
-      result.breaksFirst = breaksMatch[1].trim();
-      break;
+  // First, try to parse as JSON
+  try {
+    // Clean the text - remove markdown code blocks if present
+    let cleanedText = analysisText.trim();
+    if (cleanedText.startsWith('```')) {
+      cleanedText = cleanedText.replace(/```json\s*/i, '').replace(/```\s*/g, '').trim();
     }
+    
+    const parsed = JSON.parse(cleanedText);
+    
+    if (parsed.teamWork && Array.isArray(parsed.teamWork)) {
+      result.teamWork = parsed.teamWork;
+    }
+    if (parsed.conflicts && Array.isArray(parsed.conflicts)) {
+      result.conflicts = parsed.conflicts;
+    }
+    if (parsed.breaksFirst && Array.isArray(parsed.breaksFirst)) {
+      result.breaksFirst = parsed.breaksFirst;
+    }
+    
+    // If we got valid arrays, return them
+    if (result.teamWork.length > 0 || result.conflicts.length > 0 || result.breaksFirst.length > 0) {
+      return result;
+    }
+  } catch (e) {
+    // Not JSON, continue with text parsing
+    console.log('Not JSON format, parsing as text...');
   }
 
-  // If still not found, try splitting by double newlines or section markers
-  if (!result.teamWork || !result.conflicts || !result.breaksFirst) {
-    const sections = analysisText.split(/\n\s*\n|---|\*\*\*/);
+  // Fallback: Parse text into arrays by splitting into bullet points
+  const parseTextToArray = (text) => {
+    if (!text) return [];
+    
+    // Split by various bullet point markers
+    const items = text
+      .split(/(?:\n\s*[-•*]\s+|\n\s*\d+\.\s+|\n\s*[•]\s+)/)
+      .map(item => item.trim())
+      .filter(item => item.length > 10 && !item.match(/^(team\s+work|conflict|breaks\s+first|and|or|but|however|therefore|thus|so|also|furthermore|moreover|in addition|additionally)$/i));
+    
+    // If no bullet points found, split by sentences
+    if (items.length <= 1) {
+      const sentences = text.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 10);
+      return sentences;
+    }
+    
+    return items;
+  };
+
+  // Try to extract sections from text
+  const teamWorkMatch = analysisText.match(/(?:1\.?\s*)?(?:TEAM\s+WORK|Team\s+Work|team\s+work)[:\s]*(.*?)(?=\d+\.?\s*(?:CONFLICT|Conflict|conflict)|2\.?\s*|CONFLICT|Conflict|conflict|BREAKS|Breaks|breaks)/is);
+  const conflictMatch = analysisText.match(/(?:2\.?\s*)?(?:CONFLICT|Conflict|conflict|FIGHT|Fight|fight)[:\s]*(.*?)(?=\d+\.?\s*(?:BREAKS|Breaks|breaks)|3\.?\s*|BREAKS|Breaks|breaks|Who|who)/is);
+  const breaksMatch = analysisText.match(/(?:3\.?\s*)?(?:BREAKS\s+FIRST|Breaks\s+First|breaks\s+first|Who\s+breaks)[:\s]*(.*?)$/is);
+
+  if (teamWorkMatch) {
+    result.teamWork = parseTextToArray(teamWorkMatch[1]);
+  }
+  if (conflictMatch) {
+    result.conflicts = parseTextToArray(conflictMatch[1]);
+  }
+  if (breaksMatch) {
+    result.breaksFirst = parseTextToArray(breaksMatch[1]);
+  }
+
+  // If still empty, try splitting the entire text into three parts
+  if (result.teamWork.length === 0 && result.conflicts.length === 0 && result.breaksFirst.length === 0) {
+    const sections = analysisText.split(/\n\s*\n/);
     if (sections.length >= 3) {
-      // Try to identify which section is which
-      sections.forEach((section, index) => {
-        const lowerSection = section.toLowerCase();
-        if (!result.teamWork && (lowerSection.includes('team') || lowerSection.includes('work'))) {
-          result.teamWork = section.replace(/^[^\w]*/, '').trim();
-        } else if (!result.conflicts && (lowerSection.includes('conflict') || lowerSection.includes('fight'))) {
-          result.conflicts = section.replace(/^[^\w]*/, '').trim();
-        } else if (!result.breaksFirst && (lowerSection.includes('break') || lowerSection.includes('first'))) {
-          result.breaksFirst = section.replace(/^[^\w]*/, '').trim();
-        }
-      });
-
-      // If still not found, assign by position
-      if (!result.teamWork && sections[0]) {
-        result.teamWork = sections[0].replace(/^[^\w]*/, '').trim();
-      }
-      if (!result.conflicts && sections[1]) {
-        result.conflicts = sections[1].replace(/^[^\w]*/, '').trim();
-      }
-      if (!result.breaksFirst && sections[2]) {
-        result.breaksFirst = sections[2].replace(/^[^\w]*/, '').trim();
-      }
+      result.teamWork = parseTextToArray(sections[0]);
+      result.conflicts = parseTextToArray(sections[1]);
+      result.breaksFirst = parseTextToArray(sections[2]);
+    } else {
+      // Final fallback: split text into three equal parts
+      const length = analysisText.length;
+      const third = Math.floor(length / 3);
+      result.teamWork = parseTextToArray(analysisText.substring(0, third));
+      result.conflicts = parseTextToArray(analysisText.substring(third, 2 * third));
+      result.breaksFirst = parseTextToArray(analysisText.substring(2 * third));
     }
-  }
-
-  // Final fallback: split text into three equal parts
-  if (!result.teamWork || !result.conflicts || !result.breaksFirst) {
-    const length = analysisText.length;
-    const third = Math.floor(length / 3);
-    result.teamWork = result.teamWork || analysisText.substring(0, third).trim();
-    result.conflicts = result.conflicts || analysisText.substring(third, 2 * third).trim();
-    result.breaksFirst = result.breaksFirst || analysisText.substring(2 * third).trim();
   }
 
   return result;
@@ -247,9 +259,21 @@ function parseCompatibilityAnalysis(analysisText) {
 
 function generateFallbackCompatibility(char1, char2, location) {
   return {
-    teamWork: `${char1.name} and ${char2.name} would have a ${char1.species === char2.species ? 'natural' : 'challenging'} dynamic as a team. Their different backgrounds from ${char1.origin} and ${char2.origin} could create interesting synergies or tensions.`,
-    conflicts: `They might clash over differences in their ${char1.species !== char2.species ? 'species and' : ''} approaches to situations. ${char1.name}'s ${char1.status} status and ${char2.name}'s ${char2.status} status could also create underlying tensions.`,
-    breaksFirst: `Given their characteristics, ${char1.status === 'Dead' ? char1.name : char2.status === 'Dead' ? char2.name : 'either character'} might be more likely to break under pressure, depending on the specific circumstances at ${location.name}.`,
+    teamWork: [
+      `${char1.name} and ${char2.name} would have a ${char1.species === char2.species ? 'natural' : 'challenging'} dynamic as a team.`,
+      `Their different backgrounds from ${char1.origin} and ${char2.origin} could create interesting synergies.`,
+      `${char1.name}'s ${char1.status} status and ${char2.name}'s ${char2.status} status would influence their teamwork.`,
+      `Their combined skills could be complementary in navigating ${location.name}.`,
+    ],
+    conflicts: [
+      `They might clash over differences in their ${char1.species !== char2.species ? 'species and' : ''} approaches to situations.`,
+      `${char1.name}'s ${char1.status} status and ${char2.name}'s ${char2.status} status could create underlying tensions.`,
+      `Different perspectives on how to handle challenges at ${location.name} would likely cause disagreements.`,
+    ],
+    breaksFirst: [
+      `Given their characteristics, ${char1.status === 'Dead' ? char1.name : char2.status === 'Dead' ? char2.name : 'either character'} might be more likely to break under pressure.`,
+      `The specific circumstances at ${location.name} would test their mental resilience.`,
+    ],
   };
 }
 

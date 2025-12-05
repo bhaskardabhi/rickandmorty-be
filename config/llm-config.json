@@ -30,6 +30,14 @@
     "system_prompt": "characterDescription.compatibilitySystem",
     "user_prompt": "characterDescription.compatibilityUser",
     "max_tokens": 1000
+  },
+  {
+    "template_name": "location_description_evaluation",
+    "model": "llama-3.3-70b-versatile",
+    "temperature": 0.3,
+    "system_prompt": "locationEvaluation.system",
+    "user_prompt": "locationEvaluation.user",
+    "max_tokens": 500
   }
 ]
 

@@ -5,6 +5,7 @@ import { generateLocationDescription } from './services/descriptionService.js';
 import { generateCharacterDescription } from './services/characterDescriptionService.js';
 import { generateCharacterInsights } from './services/characterInsightsService.js';
 import { generateCharacterCompatibility } from './services/characterCompatibilityService.js';
+import { evaluateLocationDescription } from './services/locationEvaluationService.js';
 
 console.log('Loading environment variables...');
 dotenv.config();
@@ -27,16 +28,52 @@ app.post('/api/location/:id/description', async (req, res) => {
     const locationId = req.params.id;
 
     // Generate description (no database caching - frontend handles caching)
-    const description = await generateLocationDescription(locationId);
+    const result = await generateLocationDescription(locationId);
 
     res.json({ 
-      description,
+      description: result.description,
       cached: false 
     });
   } catch (error) {
     console.error('Error generating description:', error);
     res.status(500).json({ 
       error: 'Failed to generate description',
+      message: error.message 
+    });
+  }
+});
+
+// Evaluate location description endpoint
+app.post('/api/location/:id/evaluate', async (req, res) => {
+  try {
+    const locationId = req.params.id;
+    const { description } = req.body;
+
+    if (!description) {
+      return res.status(400).json({
+        error: 'Missing required parameter',
+        message: 'description is required'
+      });
+    }
+
+    // Generate description to get locationData and promptData
+    const result = await generateLocationDescription(locationId);
+    
+    // Evaluate the provided description using LLM
+    const evaluation = await evaluateLocationDescription(
+      description,
+      result.locationData,
+      result.promptData
+    );
+
+    res.json({ 
+      evaluation,
+      cached: false 
+    });
+  } catch (error) {
+    console.error('Error evaluating description:', error);
+    res.status(500).json({ 
+      error: 'Failed to evaluate description',
       message: error.message 
     });
   }

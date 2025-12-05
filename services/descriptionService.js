@@ -93,14 +93,21 @@ export async function generateLocationDescription(locationId) {
   };
 
   // Generate description using LLM service
+  let description;
   try {
-    const description = await generateWithLLM(TEMPLATE_CONFIG_NAME, promptData);
-    return description;
+    description = await generateWithLLM(TEMPLATE_CONFIG_NAME, promptData);
   } catch (error) {
     // Fallback description if LLM fails
     console.error('LLM generation failed, using fallback:', error);
-    return generateFallbackDescription(locationData, residents, totalResidents);
+    description = generateFallbackDescription(locationData, residents, totalResidents);
   }
+
+  // Return both the description and metadata for evaluation
+  return {
+    description,
+    locationData,
+    promptData,
+  };
 }
 
 function generateFallbackDescription(locationData, residents, totalResidents) {
