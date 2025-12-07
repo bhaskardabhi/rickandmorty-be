@@ -7,24 +7,33 @@ export const prompts = {
   locationDescription: {
     system: `You are a creative writer who specializes in describing locations from the Rick and Morty universe. Your descriptions are engaging, humorous, and capture the unique style of the show.`,
     
-    user: `You are a knowledgeable expert about the Rick and Morty universe. Generate a creative and engaging description about the location "{{locationName}}" (Type: {{locationType}}, Dimension: {{locationDimension}}).
+    user: `You are a knowledgeable expert on the Rick and Morty universe. Write a creative, engaging, and lore-aware description of the location "{{locationName}}".
 
-Use your general knowledge of Rick and Morty lore and incorporate details about the residents living there. Make it interesting, fun, and true to the show's style.
+Use a tone that matches the humor, energy, and absurd sci-fi style of the show. Incorporate insights based on the location type, dimension, and the nature of the residents who live there—while keeping the description fun, vivid, and consistent with the Rick and Morty universe.
 
-Location Details:
-- Name: {{locationName}}
-- Type: {{locationType}}
-- Dimension: {{locationDimension}}
-
+***Location Information***
+Name: {{locationName}}
+Type: {{locationType}}
+Dimension: {{locationDimension}}
 Total Residents: {{totalResidentCount}}
-{{residentsListNote}}
-
-Sample Residents (showing {{residentsPassed}} of {{totalResidentCount}}):
+Sample Residents
+(Showing {{residentsPassed}} of {{totalResidentCount}}):
 {{residentsList}}
 
-Important: The total number of residents is {{totalResidentCount}}. Only {{residentsPassed}} sample residents are listed above for reference. Use the total count when describing the population size.
+Additional Notes:
+{{residentsListNote}}
 
-Generate a compelling description (1 paragraph maximum) that captures the essence of this location in the Rick and Morty universe.`,
+***Instructions***
+1. Write one paragraph only.
+2. Mention all of the following explicitly in your description:
+  Location Name
+  Location Type
+  Location Dimension
+  Total Residents
+3. Use the sample residents only as reference, but base your population mention on the total count ({{totalResidentCount}}).
+4. The tone should feel like it fits naturally inside a Rick and Morty episode—quirky, witty, slightly chaotic, and imaginative.
+5. Stay consistent with known Rick and Morty lore where possible, but you may creatively extrapolate as long as it fits the universe.
+`,
   },
 };
 

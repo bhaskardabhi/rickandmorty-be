@@ -7,22 +7,40 @@ export const prompts = {
   locationEvaluation: {
     system: `You are an expert evaluator of location descriptions in the Rick and Morty universe. You analyze descriptions for accuracy, completeness, and quality. You provide objective, detailed evaluations.`,
     
-    user: `Evaluate the following location description for quality and accuracy.
+    user: `Evaluate the following Rick and Morty location description for correctness, completeness, and stylistic quality based on the original generation instructions.
 
-Location Information:
+========================
+LOCATION INFORMATION
 - Name: {{locationName}}
 - Type: {{locationType}}{{locationTypeNote}}
 - Dimension: {{locationDimension}}{{dimensionNote}}
+- Total Residents: {{totalResidentCount}}
 
-Generated Description:
+GENERATED DESCRIPTION:
 {{description}}
+========================
 
-Evaluate the description and return ONLY a valid JSON object in this exact format:
+Your task is to evaluate whether the description correctly incorporates the required elements from the prompt:
+
+REQUIRED MENTIONS (explicit or clear semantic reference):
+- Location Name ({{locationName}})
+- Location Type ({{locationType}})
+- Location Dimension ({{locationDimension}})
+- Total Residents ({{totalResidentCount}})
+
+QUALITY EXPECTATIONS:
+- The description should reflect or allude to characteristics of the residents (even if not naming them explicitly).
+- It should provide meaningful context about the location beyond just listing details.
+- It should match Rick and Morty's narrative tone: humorous, weird, chaotic, whimsical, sci-fi absurdity.
+
+Return ONLY a valid JSON object in this exact format:
+
 {
   "checks": {
     "nameMentioned": true/false,
     "typeMentioned": true/false,
-    "dimensionMentioned": true/false
+    "dimensionMentioned": true/false,
+    "totalResidentsMentioned": true/false
   },
   "qualityChecks": {
     "hasResidentInfo": true/false,
@@ -33,14 +51,22 @@ Evaluate the description and return ONLY a valid JSON object in this exact forma
   "explanation": "Brief explanation of the score"
 }
 
-Scoring Guidelines:
-- Name mentioned: 4 points (most important)
-- Type mentioned: 3 points (only if type is not "Unknown")
-- Dimension mentioned: 3 points (only if dimension is not "Unknown")
-- Quality indicators: up to 2 bonus points (resident info: 0.5, context: 0.5, Rick & Morty style: 1)
-- Maximum score: 10
+SCORING RULES:
+- Name mentioned: 4 points (most important).
+- Type mentioned: 2 points (skip if type is "Unknown").
+- Dimension mentioned: 2 points (skip if dimension is "Unknown").
+- Total residents mentioned: 1 point.
+- Quality bonuses (up to +2):
+    - Resident info present or implied: +0.5
+    - Meaningful contextual worldbuilding: +0.5
+    - Rick & Morty-style tone: +1
 
-For "mentioned" checks, consider if the information is clearly present in the description, even if not using exact words. Use semantic understanding. Set typeMentioned and dimensionMentioned to false if the corresponding value is "Unknown".`,
+Maximum score: 10.
+
+NOTES:
+- “Mentioned” means the model explicitly states or semantically refers to the information.  
+- If type or dimension is "Unknown", automatically set the corresponding "mentioned" fields to false and award no points.
+- The evaluator must judge based on *semantic meaning*, not exact keyword matching.`,
   },
 };
 
