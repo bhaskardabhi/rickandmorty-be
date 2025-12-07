@@ -88,8 +88,7 @@ app.post('/api/character/:id/description', async (req, res) => {
     const result = await generateCharacterDescription(characterId);
 
     res.json({ 
-      description: result.description,
-      cached: false 
+      description: result.description
     });
   } catch (error) {
     console.error('Error generating character description:', error);
@@ -114,7 +113,7 @@ app.post('/api/character/:id/evaluate', async (req, res) => {
     }
 
     // Generate description to get characterData, locationData, and promptData
-    const result = await generateCharacterDescription(characterId);
+    const result = await generateCharacterDescription(characterId, false);
     
     // Evaluate the provided description using LLM
     const evaluation = await evaluateCharacterDescription(
@@ -125,8 +124,7 @@ app.post('/api/character/:id/evaluate', async (req, res) => {
     );
 
     res.json({ 
-      evaluation,
-      cached: false 
+      evaluation
     });
   } catch (error) {
     console.error('Error evaluating character description:', error);

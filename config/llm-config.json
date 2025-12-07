@@ -5,17 +5,15 @@
     "model": "llama-3.3-70b-versatile",
     "temperature": 0.8,
     "system_prompt": "locationDescription.system",
-    "user_prompt": "locationDescription.user",
-    "max_tokens": null
+    "user_prompt": "locationDescription.user"
   },
   {
     "template_name": "location_description_evaluation",
     "prompt_renderer": "locationEvaluation",
-    "model": "llama-3.3-70b-versatile",
+    "model": "openai/gpt-oss-20b",
     "temperature": 0.3,
     "system_prompt": "locationEvaluation.system",
-    "user_prompt": "locationEvaluation.user",
-    "max_tokens": 500
+    "user_prompt": "locationEvaluation.user"
   },
 
 
@@ -25,17 +23,15 @@
     "model": "llama-3.3-70b-versatile",
     "temperature": 0.8,
     "system_prompt": "characterDescription.system",
-    "user_prompt": "characterDescription.user",
-    "max_tokens": null
+    "user_prompt": "characterDescription.user"
   },
   {
     "template_name": "character_description_evaluation",
     "prompt_renderer": "character",
-    "model": "llama-3.3-70b-versatile",
+    "model": "openai/gpt-oss-20b",
     "temperature": 0.3,
     "system_prompt": "characterEvaluation.system",
-    "user_prompt": "characterEvaluation.user",
-    "max_tokens": 500
+    "user_prompt": "characterEvaluation.user"
   },
 
 
@@ -45,26 +41,23 @@
     "model": "llama-3.3-70b-versatile",
     "temperature": 0.9,
     "system_prompt": "characterDescription.insightsSystem",
-    "user_prompt": "characterDescription.insightsUser",
-    "max_tokens": 500
+    "user_prompt": "characterDescription.insightsUser"
   },
   {
     "template_name": "character_compatibility_generation",
     "prompt_renderer": "character",
-    "model": "llama-3.3-70b-versatile",
+    "model": "openai/gpt-oss-120b",
     "temperature": 0.85,
     "system_prompt": "characterDescription.compatibilitySystem",
-    "user_prompt": "characterDescription.compatibilityUser",
-    "max_tokens": 1000
+    "user_prompt": "characterDescription.compatibilityUser"
   },
   {
     "template_name": "query_expansion",
     "prompt_renderer": "queryExpansion",
-    "model": "llama-3.3-70b-versatile",
+    "model": "llama-3.1-8b-instant",
     "temperature": 0.3,
     "system_prompt": "queryExpansion.system",
-    "user_prompt": "queryExpansion.user",
-    "max_tokens": 100
+    "user_prompt": "queryExpansion.user"
   }
 ]
 

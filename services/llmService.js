@@ -7,7 +7,6 @@ import { renderPrompt as renderQueryExpansionPrompt } from '../prompts/queryExpa
 import {
   getModelForTemplate,
   getTemperatureForTemplate,
-  getMaxTokensForTemplate,
   getSystemPromptTemplate,
   getUserPromptTemplate,
   getPromptRenderer,
@@ -31,7 +30,6 @@ export async function generateWithLLM(templateConfigName, promptData = {}) {
   // Get configuration from config/llm-config.json
   const model = getModelForTemplate(templateConfigName);
   const temperature = getTemperatureForTemplate(templateConfigName);
-  const maxTokens = getMaxTokensForTemplate(templateConfigName);
   const systemPromptTemplate = getSystemPromptTemplate(templateConfigName);
   const userPromptTemplate = getUserPromptTemplate(templateConfigName);
 
@@ -79,11 +77,6 @@ export async function generateWithLLM(templateConfigName, promptData = {}) {
       ],
       temperature: temperature,
     };
-
-    // Add max_tokens if specified in config
-    if (maxTokens !== null) {
-      completionOptions.max_tokens = maxTokens;
-    }
 
     const response = await groqClient.chat.completions.create(completionOptions);
 

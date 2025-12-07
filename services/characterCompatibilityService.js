@@ -6,7 +6,7 @@ import { generateWithLLM } from './llmService.js';
 dotenv.config();
 
 const graphqlClient = new GraphQLClient(
-  process.env.RICK_AND_MORTY_GRAPHQL_URL || 'https://rickandmortyapi.com/graphql'
+  process.env.RICK_AND_MORTY_GRAPHQL_URL
 );
 
 // Template configuration name

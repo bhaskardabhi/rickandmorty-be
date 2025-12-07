@@ -47,9 +47,10 @@ export function getConfigByTemplateName(templateName, configPath = null) {
 }
 
 /**
- * Get model from config or fallback to environment variable
+ * Get model from config (required - no fallback)
  * @param {string} templateName - Name of the template configuration
  * @returns {string} Model name
+ * @throws {Error} If configuration is not found
  */
 export function getModelForTemplate(templateName) {
   try {
@@ -72,20 +73,6 @@ export function getTemperatureForTemplate(templateName, defaultTemp = 0.8) {
     return config.temperature !== undefined ? config.temperature : defaultTemp;
   } catch (error) {
     throw error;
-  }
-}
-
-/**
- * Get max_tokens from config
- * @param {string} templateName - Name of the template configuration
- * @returns {number|null} Max tokens or null if not set
- */
-export function getMaxTokensForTemplate(templateName) {
-  try {
-    const config = getConfigByTemplateName(templateName);
-    return config.max_tokens || null;
-  } catch (error) {
-    return null;
   }
 }
 

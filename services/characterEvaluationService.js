@@ -53,79 +53,45 @@ export async function evaluateCharacterDescription(description, characterData, l
 function parseEvaluationResponse(evaluationText) {
   // Try to parse JSON from the response
   let cleanedText = evaluationText.trim();
-  
-  console.log('Raw evaluation response:', cleanedText.substring(0, 200)); // Log first 200 chars for debugging
-  
-  // Remove markdown code blocks if present
-  if (cleanedText.startsWith('```')) {
-    cleanedText = cleanedText.replace(/```json\s*/i, '').replace(/```\s*/g, '').trim();
+
+  try {
+    const parsed = JSON.parse(cleanedText);
+    console.log('Parsed evaluation:', JSON.stringify(parsed, null, 2));
+    
+    const result = {
+      checks: parsed.checks || {},
+      qualityChecks: parsed.qualityChecks || {},
+      autoScore: parsed.autoScore !== undefined ? parsed.autoScore : 0,
+      explanation: parsed.explanation || 'No explanation provided',
+    };
+    
+    // Ensure all required fields exist
+    const requiredChecks = [
+      'nameMentioned', 'statusMentioned', 'speciesMentioned', 'typeMentioned',
+      'genderMentioned', 'originMentioned', 'locationMentioned', 'visualAppearanceMentioned'
+    ];
+    
+    requiredChecks.forEach(check => {
+      if (result.checks[check] === undefined) {
+        result.checks[check] = false;
+      }
+    });
+    
+    const requiredQualityChecks = [
+      'hasEpisodeContext', 'hasLocationContext', 'hasRickAndMortyStyle', 'hasCharacterDepth'
+    ];
+    
+    requiredQualityChecks.forEach(check => {
+      if (result.qualityChecks[check] === undefined) {
+        result.qualityChecks[check] = false;
+      }
+    });
+    
+    return result;
+  } catch (e) {
+    console.warn('Failed to parse JSON from evaluation response:', e);
+    console.warn('JSON match was:', cleanedText.substring(0, 200));
+    throw new Error('Failed to parse evaluation response');
   }
-  
-  // Try to extract JSON object
-  const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    try {
-      const parsed = JSON.parse(jsonMatch[0]);
-      console.log('Parsed evaluation:', JSON.stringify(parsed, null, 2));
-      
-      const result = {
-        checks: parsed.checks || {},
-        qualityChecks: parsed.qualityChecks || {},
-        autoScore: parsed.autoScore !== undefined ? parsed.autoScore : 0,
-        explanation: parsed.explanation || 'No explanation provided',
-      };
-      
-      // Ensure all required fields exist
-      const requiredChecks = [
-        'nameMentioned', 'statusMentioned', 'speciesMentioned', 'typeMentioned',
-        'genderMentioned', 'originMentioned', 'locationMentioned', 'visualAppearanceMentioned'
-      ];
-      
-      requiredChecks.forEach(check => {
-        if (result.checks[check] === undefined) {
-          result.checks[check] = false;
-        }
-      });
-      
-      const requiredQualityChecks = [
-        'hasEpisodeContext', 'hasLocationContext', 'hasRickAndMortyStyle', 'hasCharacterDepth'
-      ];
-      
-      requiredQualityChecks.forEach(check => {
-        if (result.qualityChecks[check] === undefined) {
-          result.qualityChecks[check] = false;
-        }
-      });
-      
-      return result;
-    } catch (e) {
-      console.warn('Failed to parse JSON from evaluation response:', e);
-      console.warn('JSON match was:', jsonMatch[0].substring(0, 200));
-    }
-  } else {
-    console.warn('No JSON object found in evaluation response');
-  }
-  
-  // Fallback: return empty evaluation with error explanation
-  return {
-    checks: {
-      nameMentioned: false,
-      statusMentioned: false,
-      speciesMentioned: false,
-      typeMentioned: false,
-      genderMentioned: false,
-      originMentioned: false,
-      locationMentioned: false,
-      visualAppearanceMentioned: false,
-    },
-    qualityChecks: {
-      hasEpisodeContext: false,
-      hasLocationContext: false,
-      hasRickAndMortyStyle: false,
-      hasCharacterDepth: false,
-    },
-    autoScore: 0,
-    explanation: `Failed to parse evaluation response. Raw response: ${cleanedText.substring(0, 100)}...`,
-  };
 }
 

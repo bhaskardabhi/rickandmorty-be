@@ -6,7 +6,7 @@ import { generateWithLLM } from './llmService.js';
 dotenv.config();
 
 const graphqlClient = new GraphQLClient(
-  process.env.RICK_AND_MORTY_GRAPHQL_URL || 'https://rickandmortyapi.com/graphql'
+  process.env.RICK_AND_MORTY_GRAPHQL_URL
 );
 
 // Template configuration name - defined in config/llm-config.json
@@ -44,7 +44,7 @@ const GET_CHARACTER_QUERY = `
   }
 `;
 
-export async function generateCharacterDescription(characterId) {
+export async function generateCharacterDescription(characterId, generateDescription = true) {
   // Fetch character data from GraphQL API
   const data = await graphqlClient.request(GET_CHARACTER_QUERY, { id: characterId });
   const character = data.character;
@@ -107,6 +107,14 @@ export async function generateCharacterDescription(characterId) {
     episodesCount: character.episode?.length || 0,
     episodesList: episodesList || 'No episodes available.',
   };
+
+  if(!generateDescription) {
+    return {
+      characterData,
+      locationData,
+      promptData,
+    };
+  }
 
   // Step 6: Generate description using LLM service
   try {
