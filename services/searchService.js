@@ -6,6 +6,7 @@
 import pkg from 'pg';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
+import { generateWithLLM } from './llmService.js';
 
 const { Pool } = pkg;
 dotenv.config();
@@ -24,13 +25,38 @@ const embeddingClient = new GoogleGenAI({
 });
 
 /**
+ * Enhance query using LLM for better semantic matching
+ * Short queries (1-2 words) are expanded using LLM to create more descriptive queries
+ */
+async function enhanceQueryWithLLM(query) {
+  const trimmedQuery = query.trim();
+  const words = trimmedQuery.split(/\s+/).filter(w => w.length > 0);
+  
+  // Only use LLM for short queries (1-2 words) that might need expansion
+  if (words.length <= 2 && trimmedQuery.length > 0) {
+    try {
+      const expandedQuery = await generateWithLLM('query_expansion', { query: trimmedQuery });
+      console.log(`Query expanded from "${query}" to "${expandedQuery}"`);
+      return expandedQuery.trim();
+    } catch (error) {
+      throw error;
+    }
+  }
+  
+  return query;
+}
+
+/**
  * Generate embedding for search query
  */
 async function generateQueryEmbedding(query) {
   try {
+    // Enhance the query using LLM for better semantic matching (for short queries)
+    const enhancedQuery = await enhanceQueryWithLLM(query);
+    
     const response = await embeddingClient.models.embedContent({
       model: 'text-embedding-004',
-      contents: query,
+      contents: enhancedQuery,
     });
     
     let embedding;
@@ -65,17 +91,23 @@ async function generateQueryEmbedding(query) {
 }
 
 /**
- * Search characters by semantic similarity
+ * Perform semantic search across characters and locations using unified table
+ * Returns top 6 results only
  */
-async function searchCharacters(queryEmbedding, limit = 10) {
+export async function semanticSearch(query, limit = 6) {
   const client = await pool.connect();
   
   try {
+    // Generate embedding for the query
+    const queryEmbedding = await generateQueryEmbedding(query);
     const embeddingString = `[${queryEmbedding.join(',')}]`;
     
+    // Semantic search using vector embeddings
+    // Using cosine distance (<=>) - lower is better (0 = identical, 1 = orthogonal)
     const result = await client.query(`
       SELECT 
         id,
+        entity_type,
         name,
         status,
         species,
@@ -83,93 +115,60 @@ async function searchCharacters(queryEmbedding, limit = 10) {
         gender,
         image,
         location_name,
-        embedding <=> $1::vector AS distance
-      FROM characters
-      WHERE embedding IS NOT NULL
-      ORDER BY embedding <=> $1::vector
-      LIMIT $2
-    `, [embeddingString, limit]);
-    
-    return result.rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      status: row.status,
-      species: row.species,
-      type: row.type,
-      gender: row.gender,
-      image: row.image,
-      location: row.location_name,
-      distance: parseFloat(row.distance),
-      type: 'character',
-    }));
-  } finally {
-    client.release();
-  }
-}
-
-/**
- * Search locations by semantic similarity
- */
-async function searchLocations(queryEmbedding, limit = 10) {
-  const client = await pool.connect();
-  
-  try {
-    const embeddingString = `[${queryEmbedding.join(',')}]`;
-    
-    const result = await client.query(`
-      SELECT 
-        id,
-        name,
-        type,
+        location_type,
         dimension,
         embedding <=> $1::vector AS distance
-      FROM locations
+      FROM entities
       WHERE embedding IS NOT NULL
       ORDER BY embedding <=> $1::vector
       LIMIT $2
     `, [embeddingString, limit]);
     
-    return result.rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      locationType: row.type,
-      dimension: row.dimension,
-      distance: parseFloat(row.distance),
-      type: 'location',
-    }));
-  } finally {
-    client.release();
-  }
-}
-
-/**
- * Perform semantic search across characters and locations
- */
-export async function semanticSearch(query, limit = 20) {
-  try {
-    // Generate embedding for the query
-    const queryEmbedding = await generateQueryEmbedding(query);
+    console.log(`Found ${result.rows.length} semantic results for query: "${query}"`);
     
-    // Search both characters and locations
-    const characterLimit = Math.ceil(limit / 2);
-    const locationLimit = Math.ceil(limit / 2);
-    
-    const [characters, locations] = await Promise.all([
-      searchCharacters(queryEmbedding, characterLimit),
-      searchLocations(queryEmbedding, locationLimit),
-    ]);
-    
-    // Combine and sort by distance (lower is better)
-    const results = [...characters, ...locations].sort((a, b) => a.distance - b.distance);
+    // Format results based on entity type
+    const results = result.rows.map(row => {
+      const distance = parseFloat(row.distance);
+      
+      if (row.entity_type === 'character') {
+        return {
+          id: row.id,
+          name: row.name,
+          status: row.status,
+          species: row.species,
+          type: row.type,
+          gender: row.gender,
+          image: row.image,
+          location: row.location_name,
+          distance: distance,
+          type: 'character',
+        };
+      } else {
+        return {
+          id: row.id,
+          name: row.name,
+          locationType: row.location_type,
+          dimension: row.dimension,
+          distance: distance,
+          type: 'location',
+        };
+      }
+    });
     
     return {
       query,
-      results: results.slice(0, limit),
+      results,
       total: results.length,
     };
   } catch (error) {
     console.error('Error performing semantic search:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+    });
     throw error;
+  } finally {
+    client.release();
   }
 }
 

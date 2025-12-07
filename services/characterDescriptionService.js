@@ -119,19 +119,7 @@ export async function generateCharacterDescription(characterId) {
       promptData,
     };
   } catch (error) {
-    // Fallback description if LLM fails
     console.error('LLM generation failed, using fallback:', error);
-    const fallbackDescription = generateFallbackDescription(characterData, locationData, episodes);
-    return {
-      description: fallbackDescription,
-      characterData,
-      locationData,
-      promptData,
-    };
+    throw error;
   }
 }
-
-function generateFallbackDescription(characterData, locationData, episodes) {
-  return `${characterData.name} is a ${characterData.status} ${characterData.species}${characterData.type !== 'Unknown' ? ` (${characterData.type})` : ''} from the Rick and Morty universe. ${characterData.gender} character originally from ${characterData.origin}, currently located at ${characterData.location}. ${episodes.length > 0 ? `Appeared in ${episodes.length} episodes.` : ''} This character is part of the vast multiverse explored in the show.`;
-}
-

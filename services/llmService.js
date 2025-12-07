@@ -3,12 +3,14 @@ import dotenv from 'dotenv';
 import { renderPrompt as renderLocationPrompt } from '../prompts/locationDescription.js';
 import { renderPrompt as renderCharacterPrompt } from '../prompts/characterDescription.js';
 import { renderPrompt as renderLocationEvaluationPrompt } from '../prompts/locationEvaluation.js';
+import { renderPrompt as renderQueryExpansionPrompt } from '../prompts/queryExpansion.js';
 import {
   getModelForTemplate,
   getTemperatureForTemplate,
   getMaxTokensForTemplate,
   getSystemPromptTemplate,
   getUserPromptTemplate,
+  getPromptRenderer,
 } from '../config/configLoader.js';
 
 dotenv.config();
@@ -33,36 +35,34 @@ export async function generateWithLLM(templateConfigName, promptData = {}) {
   const systemPromptTemplate = getSystemPromptTemplate(templateConfigName);
   const userPromptTemplate = getUserPromptTemplate(templateConfigName);
 
-  // Determine which prompt renderer to use based on template name
-  const isCharacterTemplate = templateConfigName.includes('character');
-  const isEvaluationTemplate = templateConfigName.includes('evaluation');
-  const isCharacterEvaluation = isCharacterTemplate && isEvaluationTemplate;
+  // Get prompt renderer from config
+  const promptRendererName = getPromptRenderer(templateConfigName);
   
-  let renderPrompt;
-  if (isCharacterEvaluation) {
-    renderPrompt = renderCharacterPrompt;
-  } else if (isEvaluationTemplate) {
-    renderPrompt = renderLocationEvaluationPrompt;
-  } else if (isCharacterTemplate) {
-    renderPrompt = renderCharacterPrompt;
-  } else {
-    renderPrompt = renderLocationPrompt;
+  // Map renderer name to actual renderer function
+  const rendererMap = {
+    'location': renderLocationPrompt,
+    'character': renderCharacterPrompt,
+    'locationEvaluation': renderLocationEvaluationPrompt,
+    'queryExpansion': renderQueryExpansionPrompt,
+  };
+  
+  const renderPrompt = rendererMap[promptRendererName] || renderLocationPrompt;
+  
+  if (!rendererMap[promptRendererName]) {
+    console.warn(`Unknown prompt renderer "${promptRendererName}" for template "${templateConfigName}", using default location renderer`);
   }
   
   // Get prompts from template files
-  const systemPrompt = systemPromptTemplate 
-    ? renderPrompt(systemPromptTemplate, promptData)
-    : renderPrompt(isCharacterEvaluation ? 'characterEvaluation.system' :
-                   isEvaluationTemplate ? 'locationEvaluation.system' : 
-                   isCharacterTemplate ? 'characterDescription.system' : 
-                   'locationDescription.system', promptData);
+  if (!systemPromptTemplate || !userPromptTemplate) {
+    throw new Error(`Missing prompt templates for "${templateConfigName}". Both system_prompt and user_prompt must be specified in config.`);
+  }
   
-  const userPrompt = userPromptTemplate
-    ? renderPrompt(userPromptTemplate, promptData)
-    : renderPrompt(isCharacterEvaluation ? 'characterEvaluation.user' :
-                   isEvaluationTemplate ? 'locationEvaluation.user' : 
-                   isCharacterTemplate ? 'characterDescription.user' : 
-                   'locationDescription.user', promptData);
+  const systemPrompt = renderPrompt(systemPromptTemplate, promptData);
+  const userPrompt = renderPrompt(userPromptTemplate, promptData);
+  
+  if (!systemPrompt || !userPrompt) {
+    throw new Error(`Failed to render prompts for "${templateConfigName}". Check that the prompt template names are correct.`);
+  }
 
   try {
     const completionOptions = {

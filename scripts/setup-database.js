@@ -1,6 +1,6 @@
 /**
  * Database setup script
- * Creates PostgreSQL tables for characters and locations with vector support
+ * Creates unified PostgreSQL table for characters and locations with vector support
  */
 
 import pkg from 'pg';
@@ -27,78 +27,42 @@ async function setupDatabase() {
     console.log('Enabling pgvector extension...');
     await client.query('CREATE EXTENSION IF NOT EXISTS vector;');
     
-    // Create characters table
-    console.log('Creating characters table...');
+    // Create unified entities table for both characters and locations
+    // Only includes fields used by /api/search endpoint
+    console.log('Creating unified entities table...');
     await client.query(`
-      CREATE TABLE IF NOT EXISTS characters (
-        id INTEGER PRIMARY KEY,
+      CREATE TABLE IF NOT EXISTS entities (
+        id INTEGER NOT NULL,
+        entity_type TEXT NOT NULL CHECK (entity_type IN ('character', 'location')),
         name TEXT NOT NULL,
+        -- Character-specific fields (NULL for locations)
         status TEXT,
         species TEXT,
         type TEXT,
         gender TEXT,
         image TEXT,
-        origin_id INTEGER,
-        origin_name TEXT,
-        origin_type TEXT,
-        origin_dimension TEXT,
-        location_id INTEGER,
         location_name TEXT,
+        -- Location-specific fields (NULL for characters)
         location_type TEXT,
-        location_dimension TEXT,
-        episode_ids INTEGER[],
-        episode_names TEXT[],
-        episode_codes TEXT[],
-        episode_air_dates TEXT[],
-        appearance TEXT,
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW(),
-        embedding vector(768)
-      );
-    `);
-    
-    // Add appearance column if table exists but column doesn't
-    console.log('Ensuring appearance column exists...');
-    await client.query(`
-      ALTER TABLE characters 
-      ADD COLUMN IF NOT EXISTS appearance TEXT;
-    `);
-    
-    // Create locations table
-    console.log('Creating locations table...');
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS locations (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL,
-        type TEXT,
         dimension TEXT,
-        resident_ids INTEGER[],
-        resident_names TEXT[],
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW(),
-        embedding vector(768)
+        -- Embedding for semantic search
+        embedding vector(768),
+        PRIMARY KEY (id, entity_type)
       );
     `);
     
     // Create indexes for vector similarity search
     console.log('Creating indexes...');
     await client.query(`
-      CREATE INDEX IF NOT EXISTS characters_embedding_idx 
-      ON characters USING ivfflat (embedding vector_cosine_ops)
-      WITH (lists = 100);
-    `);
-    
-    await client.query(`
-      CREATE INDEX IF NOT EXISTS locations_embedding_idx 
-      ON locations USING ivfflat (embedding vector_cosine_ops)
-      WITH (lists = 100);
+      CREATE INDEX IF NOT EXISTS entities_embedding_idx 
+      ON entities USING ivfflat (embedding vector_cosine_ops)
+      WITH (lists = 100)
+      WHERE embedding IS NOT NULL;
     `);
     
     // Create indexes for common queries
-    await client.query('CREATE INDEX IF NOT EXISTS idx_characters_name ON characters(name);');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_characters_species ON characters(species);');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_locations_name ON locations(name);');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_locations_dimension ON locations(dimension);');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_entities_name ON entities(name);');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_entities_type ON entities(entity_type);');
     
     console.log('✅ Database setup complete!');
   } catch (error) {

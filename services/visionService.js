@@ -30,11 +30,6 @@ export async function analyzeCharacterImage(imageUrl, characterName) {
     { client: groqClient, model: 'meta-llama/llama-4-scout-17b-16e-instruct', name: 'Groq' },
   ];
   
-  // Add OpenAI as fallback if available
-  if (openaiClient) {
-    clients.push({ client: openaiClient, model: 'gpt-4o', name: 'OpenAI' });
-  }
-
   for (const { client, model, name } of clients) {
     try {
       console.log(`Trying ${name} vision model: ${model}`);

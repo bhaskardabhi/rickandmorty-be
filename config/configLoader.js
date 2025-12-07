@@ -54,10 +54,9 @@ export function getConfigByTemplateName(templateName, configPath = null) {
 export function getModelForTemplate(templateName) {
   try {
     const config = getConfigByTemplateName(templateName);
-    return config.model || process.env.LLM_MODEL || 'openai/gpt-4';
+    return config.model;
   } catch (error) {
-    // Fallback to environment variable if config not found
-    return process.env.LLM_MODEL || 'openai/gpt-4';
+    throw error;
   }
 }
 
@@ -72,7 +71,7 @@ export function getTemperatureForTemplate(templateName, defaultTemp = 0.8) {
     const config = getConfigByTemplateName(templateName);
     return config.temperature !== undefined ? config.temperature : defaultTemp;
   } catch (error) {
-    return defaultTemp;
+    throw error;
   }
 }
 
@@ -115,6 +114,20 @@ export function getUserPromptTemplate(templateName) {
     return config.user_prompt || null;
   } catch (error) {
     return null;
+  }
+}
+
+/**
+ * Get prompt renderer name from config
+ * @param {string} templateName - Name of the template configuration
+ * @returns {string} Prompt renderer name (defaults to "location" if not found)
+ */
+export function getPromptRenderer(templateName) {
+  try {
+    const config = getConfigByTemplateName(templateName);
+    return config.prompt_renderer || 'location';
+  } catch (error) {
+    return 'location';
   }
 }
 

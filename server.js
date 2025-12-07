@@ -29,12 +29,10 @@ app.post('/api/location/:id/description', async (req, res) => {
   try {
     const locationId = req.params.id;
 
-    // Generate description (no database caching - frontend handles caching)
     const result = await generateLocationDescription(locationId);
 
     res.json({ 
-      description: result.description,
-      cached: false 
+      description: result.description
     });
   } catch (error) {
     console.error('Error generating description:', error);
@@ -200,12 +198,11 @@ app.post('/api/search', async (req, res) => {
       });
     }
 
-    const searchLimit = limit && Number.isInteger(limit) && limit > 0 ? limit : 20;
+    const searchLimit = limit && Number.isInteger(limit) && limit > 0 ? limit : 6;
     const results = await semanticSearch(query.trim(), searchLimit);
 
     res.json({ 
-      ...results,
-      cached: false 
+      ...results 
     });
   } catch (error) {
     console.error('Error performing semantic search:', error);

@@ -1,13 +1,19 @@
 # Rick and Morty Backend API
 
-Backend service for generating location descriptions using LLM models.
+Backend service for generating character and location descriptions, evaluations, and semantic search using LLM models and vector embeddings.
 
 ## Features
 
 - **Location Description Generation**: Generates creative descriptions about locations in the Rick and Morty universe
-- **GraphQL Integration**: Fetches location and resident data from the Rick and Morty GraphQL API
-- **Grok/Groq Integration**: Uses Groq's API directly for fast LLM inference with models like Llama 3.3 70B
-- **Frontend Caching**: Frontend handles caching via localStorage to avoid redundant API calls
+- **Character Description Generation**: Generates descriptions with visual appearance analysis using vision AI
+- **Description Evaluation**: Evaluates description quality and accuracy (for both locations and characters)
+- **Character Insights**: Generates AI-powered insights about characters
+- **Character Compatibility Analysis**: Analyzes compatibility and conflicts between characters
+- **Semantic Search**: Vector-based search across characters and locations using embeddings
+- **Database Integration**: PostgreSQL with pgvector for storing and searching embeddings
+- **GraphQL Integration**: Fetches data from the Rick and Morty GraphQL API
+- **Groq Integration**: Uses Groq's API for fast LLM inference
+- **Google Gemini**: Uses Gemini for embeddings and vision analysis
 
 ## Setup
 
@@ -18,26 +24,28 @@ npm install
 
 2. Create a `.env` file:
 ```bash
-# Option 1: Use the setup script
-./setup-env.sh
-
-# Option 2: Create manually
-# Copy the template from setup-env.sh or create .env with the variables below
-```
-
-3. Edit `.env` and add your Groq API key:
-```
 PORT=3001
 RICK_AND_MORTY_GRAPHQL_URL=https://rickandmortyapi.com/graphql
 
-# Groq API Key (get from https://console.groq.com/keys)
+# Groq API Key (for LLM operations)
 GROQ_API_KEY=your_groq_api_key_here
+
+# Google API Key (for embeddings and vision)
+GOOGLE_API_KEY=your_google_api_key_here
+
+# Database Configuration (for semantic search)
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=rickandmorty
+DB_USER=postgres
+DB_PASSWORD=postgres
 ```
 
-**Model Configuration:**
-- Model is configured in `config/llm-config.json`
-- Default model: `llama-3.3-70b-versatile`
-- Other available Groq models: `llama-3-70b-8192`, `mixtral-8x7b-32768`, `gemma-7b-it`
+3. Setup database (optional, for semantic search):
+```bash
+npm run setup-db
+npm run sync-data
+```
 
 4. Run the server:
 ```bash
@@ -46,24 +54,23 @@ npm run dev
 
 ## API Endpoints
 
-### POST `/api/location/:id/description`
+### Location Endpoints
+- `POST /api/location/:id/description` - Generate location description
+- `POST /api/location/:id/evaluate` - Evaluate location description
 
-Generates or retrieves a description for a location.
+### Character Endpoints
+- `POST /api/character/:id/description` - Generate character description
+- `POST /api/character/:id/evaluate` - Evaluate character description
+- `POST /api/character/:id/insights` - Generate character insights
 
-**Response:**
-```json
-{
-  "description": "Generated description text...",
-  "cached": false
-}
-```
+### Compatibility
+- `POST /api/compatibility` - Analyze character compatibility
 
-## How It Works
+### Search
+- `POST /api/search` - Semantic search across characters and locations
 
-1. When a request is made for a location description:
-   - Fetches location data (name, type, dimension) and up to 20 residents from the GraphQL API
-   - For each resident, collects: name, status, species, type, gender, origin.name, location.name
-   - Sends this data to Groq's API (Grok) to generate a creative description
-   - Returns the description
-2. Frontend handles caching via localStorage to avoid redundant API calls
+## Database Scripts
+
+- `npm run setup-db` - Setup PostgreSQL database with vector support
+- `npm run sync-data` - Sync all characters and locations to database with embeddings
 

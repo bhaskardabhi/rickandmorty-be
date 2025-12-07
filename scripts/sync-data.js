@@ -15,14 +15,8 @@ dotenv.config();
 
 // Initialize clients
 const graphqlClient = new GraphQLClient(
-  process.env.RICK_AND_MORTY_GRAPHQL_URL || 'https://rickandmortyapi.com/graphql'
+  process.env.RICK_AND_MORTY_GRAPHQL_URL
 );
-
-// Initialize Groq client (Groq uses OpenAI-compatible API)
-const groqClient = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY || process.env.LLM_API_KEY,
-  baseURL: 'https://api.groq.com/openai/v1',
-});
 
 // Initialize Google Gemini AI for embeddings
 const embeddingClient = new GoogleGenAI({
@@ -142,49 +136,124 @@ async function generateEmbedding(text) {
     
     return embedding;
   } catch (error) {
-    if (!process.env.GOOGLE_API_KEY) {
-      console.warn('⚠️  GOOGLE_API_KEY is required for embeddings.');
-      console.warn('   Set GOOGLE_API_KEY in your .env file to generate embeddings.');
-    }
-    console.error('Error generating embedding:', error.message);
-    // Return null if embedding fails - data will still be stored without embedding
-    return null;
+    throw error;
   }
 }
 
 /**
  * Create text representation of character for embedding
+ * Returns descriptive, natural language text optimized for RAG
  * @param {Object} character - Character data
  * @param {string} appearance - Visual appearance description (optional)
  */
 function createCharacterText(character, appearance = null) {
-  const parts = [
-    `Character: ${character.name}`,
-    `Status: ${character.status}`,
-    `Species: ${character.species}`,
-    character.type ? `Type: ${character.type}` : '',
-    `Gender: ${character.gender}`,
-    character.origin?.name ? `Origin: ${character.origin.name} (${character.origin.dimension || 'Unknown dimension'})` : '',
-    character.location?.name ? `Location: ${character.location.name} (${character.location.dimension || 'Unknown dimension'})` : '',
-    character.episode?.length > 0 ? `Appears in ${character.episode.length} episodes` : '',
-    appearance ? `Visual Appearance: ${appearance}` : '',
-  ].filter(Boolean);
+  const sections = [];
   
-  return parts.join('. ');
+  // Character identity
+  sections.push(`${character.name} is a ${character.species}${character.type ? ` of type ${character.type}` : ''} who is ${character.status.toLowerCase()}.`);
+  
+  // Gender and basic info
+  if (character.gender && character.gender !== 'unknown') {
+    sections.push(`They are ${character.gender.toLowerCase()}.`);
+  }
+  
+  // Origin information
+  if (character.origin?.name) {
+    const originDesc = character.origin.dimension 
+      ? `originally from ${character.origin.name} in the ${character.origin.dimension} dimension`
+      : `originally from ${character.origin.name}`;
+    sections.push(`This character is ${originDesc}.`);
+  }
+  
+  // Current location
+  if (character.location?.name) {
+    const locationDesc = character.location.dimension
+      ? `currently located at ${character.location.name} in the ${character.location.dimension} dimension`
+      : `currently located at ${character.location.name}`;
+    sections.push(`They are ${locationDesc}.`);
+  }
+  
+  // Episode appearances with context
+  if (character.episode && character.episode.length > 0) {
+    const episodeCount = character.episode.length;
+    const episodeList = character.episode.slice(0, 5).map(ep => ep.name).join(', ');
+    const moreEpisodes = episodeCount > 5 ? ` and ${episodeCount - 5} more` : '';
+    sections.push(`This character appears in ${episodeCount} episode${episodeCount > 1 ? 's' : ''} including: ${episodeList}${moreEpisodes}.`);
+  }
+  
+  // Visual appearance - most important for RAG as it provides rich semantic information
+  if (appearance) {
+    sections.push(`Physical appearance: ${appearance}`);
+  }
+  
+  // Additional context for better semantic understanding
+  const contextParts = [];
+  if (character.status === 'Alive') {
+    contextParts.push('living');
+  } else if (character.status === 'Dead') {
+    contextParts.push('deceased');
+  }
+  
+  if (character.species === 'Human') {
+    contextParts.push('human character');
+  } else if (character.species === 'Alien') {
+    contextParts.push('alien being');
+  } else if (character.species) {
+    contextParts.push(`${character.species.toLowerCase()} species`);
+  }
+  
+  if (contextParts.length > 0) {
+    sections.push(`This is a ${contextParts.join(', ')} in the Rick and Morty universe.`);
+  }
+  
+  return sections.join(' ');
 }
 
 /**
  * Create text representation of location for embedding
+ * Returns descriptive, natural language text optimized for RAG
+ * @param {Object} location - Location data
  */
 function createLocationText(location) {
-  const parts = [
-    `Location: ${location.name}`,
-    location.type ? `Type: ${location.type}` : '',
-    location.dimension ? `Dimension: ${location.dimension}` : '',
-    location.residents?.length > 0 ? `Has ${location.residents.length} residents` : '',
-  ].filter(Boolean);
+  const sections = [];
   
-  return parts.join('. ');
+  // Location identity and type
+  if (location.type) {
+    sections.push(`${location.name} is a ${location.type.toLowerCase()} in the Rick and Morty universe.`);
+  } else {
+    sections.push(`${location.name} is a location in the Rick and Morty universe.`);
+  }
+  
+  // Dimension information
+  if (location.dimension) {
+    sections.push(`This location exists in the ${location.dimension} dimension.`);
+  } else {
+    sections.push(`This location's dimension is unknown.`);
+  }
+  
+  // Resident information with context
+  if (location.residents && location.residents.length > 0) {
+    const residentCount = location.residents.length;
+    const residentList = location.residents.slice(0, 5).map(r => r.name).join(', ');
+    const moreResidents = residentCount > 5 ? ` and ${residentCount - 5} more` : '';
+    
+    if (residentCount === 1) {
+      sections.push(`The resident of this location is ${residentList}.`);
+    } else if (residentCount <= 5) {
+      sections.push(`This location is home to ${residentCount} residents: ${residentList}.`);
+    } else {
+      sections.push(`This location is home to ${residentCount} residents including: ${residentList}${moreResidents}.`);
+    }
+  } else {
+    sections.push(`This location has no known residents.`);
+  }
+  
+  // Additional context based on location type
+  if (location.type) {
+    sections.push(`This is a ${location.type.toLowerCase()} location in the Rick and Morty universe.`);
+  }
+  
+  return sections.join(' ');
 }
 
 /**
@@ -207,9 +276,6 @@ async function fetchAllCharacters() {
       
       hasNextPage = data.characters?.info?.next !== null;
       page++;
-      
-      // Small delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
       console.error(`Error fetching characters page ${page}:`, error);
       hasNextPage = false;
@@ -240,9 +306,6 @@ async function fetchAllLocations() {
       
       hasNextPage = data.locations?.info?.next !== null;
       page++;
-      
-      // Small delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
       console.error(`Error fetching locations page ${page}:`, error);
       hasNextPage = false;
@@ -254,11 +317,11 @@ async function fetchAllLocations() {
 }
 
 /**
- * Store character in database with embedding and appearance
+ * Process character: analyze image and generate embedding
+ * Returns data ready for database insertion
  */
-async function storeCharacter(client, character) {
-  // Analyze character image to get appearance description FIRST
-  // so we can include it in the embedding
+async function processCharacter(character) {
+  // Analyze character image to get appearance description
   let appearance = null;
   if (character.image) {
     try {
@@ -273,111 +336,114 @@ async function storeCharacter(client, character) {
   const characterText = createCharacterText(character, appearance);
   const embedding = await generateEmbedding(characterText);
   
-  const episodeIds = character.episode?.map(ep => parseInt(ep.id)) || [];
-  const episodeNames = character.episode?.map(ep => ep.name) || [];
-  const episodeCodes = character.episode?.map(ep => ep.episode) || [];
-  const episodeAirDates = character.episode?.map(ep => ep.air_date) || [];
-  
-  // Build query with embedding
-  const embeddingValue = embedding 
-    ? `'[${embedding.join(',')}]'::vector` 
+  return {
+    id: parseInt(character.id),
+    name: character.name,
+    status: character.status,
+    species: character.species,
+    type: character.type || null,
+    gender: character.gender,
+    image: character.image,
+    location_name: character.location?.name || null,
+    embedding,
+  };
+}
+
+/**
+ * Store processed character in database
+ */
+async function storeCharacter(client, processedCharacter) {
+  const embeddingValue = processedCharacter.embedding 
+    ? `'[${processedCharacter.embedding.join(',')}]'::vector` 
     : 'NULL';
   
   const query = `
-    INSERT INTO characters (
-      id, name, status, species, type, gender, image,
-      origin_id, origin_name, origin_type, origin_dimension,
-      location_id, location_name, location_type, location_dimension,
-      episode_ids, episode_names, episode_codes, episode_air_dates,
-      appearance, embedding, updated_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, ${embeddingValue}, NOW())
-    ON CONFLICT (id) DO UPDATE SET
+    INSERT INTO entities (
+      id, entity_type, name, status, species, type, gender, image, location_name, embedding
+    ) VALUES ($1, 'character', $2, $3, $4, $5, $6, $7, $8, ${embeddingValue})
+    ON CONFLICT (id, entity_type) DO UPDATE SET
       name = EXCLUDED.name,
       status = EXCLUDED.status,
       species = EXCLUDED.species,
       type = EXCLUDED.type,
       gender = EXCLUDED.gender,
       image = EXCLUDED.image,
-      origin_id = EXCLUDED.origin_id,
-      origin_name = EXCLUDED.origin_name,
-      origin_type = EXCLUDED.origin_type,
-      origin_dimension = EXCLUDED.origin_dimension,
-      location_id = EXCLUDED.location_id,
       location_name = EXCLUDED.location_name,
-      location_type = EXCLUDED.location_type,
-      location_dimension = EXCLUDED.location_dimension,
-      episode_ids = EXCLUDED.episode_ids,
-      episode_names = EXCLUDED.episode_names,
-      episode_codes = EXCLUDED.episode_codes,
-      episode_air_dates = EXCLUDED.episode_air_dates,
-      appearance = EXCLUDED.appearance,
-      embedding = EXCLUDED.embedding,
-      updated_at = NOW()
+      embedding = EXCLUDED.embedding
   `;
   
   await client.query(query, [
-    parseInt(character.id),
-    character.name,
-    character.status,
-    character.species,
-    character.type || null,
-    character.gender,
-    character.image,
-    character.origin?.id ? parseInt(character.origin.id) : null,
-    character.origin?.name || null,
-    character.origin?.type || null,
-    character.origin?.dimension || null,
-    character.location?.id ? parseInt(character.location.id) : null,
-    character.location?.name || null,
-    character.location?.type || null,
-    character.location?.dimension || null,
-    episodeIds.length > 0 ? episodeIds : null,
-    episodeNames.length > 0 ? episodeNames : null,
-    episodeCodes.length > 0 ? episodeCodes : null,
-    episodeAirDates.length > 0 ? episodeAirDates : null,
-    appearance,
+    processedCharacter.id,
+    processedCharacter.name,
+    processedCharacter.status,
+    processedCharacter.species,
+    processedCharacter.type,
+    processedCharacter.gender,
+    processedCharacter.image,
+    processedCharacter.location_name,
   ]);
 }
 
 /**
- * Store location in database with embedding
+ * Process location: generate embedding
+ * Returns data ready for database insertion
  */
-async function storeLocation(client, location) {
+async function processLocation(location) {
   const locationText = createLocationText(location);
   const embedding = await generateEmbedding(locationText);
   
-  const residentIds = location.residents?.map(r => parseInt(r.id)) || [];
-  const residentNames = location.residents?.map(r => r.name) || [];
-  
-  // Build query with embedding
-  const embeddingValue = embedding 
-    ? `'[${embedding.join(',')}]'::vector` 
+  return {
+    id: parseInt(location.id),
+    name: location.name,
+    type: location.type || null,
+    dimension: location.dimension || null,
+    embedding,
+  };
+}
+
+/**
+ * Store processed location in database
+ */
+async function storeLocation(client, processedLocation) {
+  const embeddingValue = processedLocation.embedding 
+    ? `'[${processedLocation.embedding.join(',')}]'::vector` 
     : 'NULL';
   
   const query = `
-    INSERT INTO locations (
-      id, name, type, dimension,
-      resident_ids, resident_names,
-      embedding, updated_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, ${embeddingValue}, NOW())
-    ON CONFLICT (id) DO UPDATE SET
+    INSERT INTO entities (
+      id, entity_type, name, location_type, dimension, embedding
+    ) VALUES ($1, 'location', $2, $3, $4, ${embeddingValue})
+    ON CONFLICT (id, entity_type) DO UPDATE SET
       name = EXCLUDED.name,
-      type = EXCLUDED.type,
+      location_type = EXCLUDED.location_type,
       dimension = EXCLUDED.dimension,
-      resident_ids = EXCLUDED.resident_ids,
-      resident_names = EXCLUDED.resident_names,
-      embedding = EXCLUDED.embedding,
-      updated_at = NOW()
+      embedding = EXCLUDED.embedding
   `;
   
   await client.query(query, [
-    parseInt(location.id),
-    location.name,
-    location.type || null,
-    location.dimension || null,
-    residentIds.length > 0 ? residentIds : null,
-    residentNames.length > 0 ? residentNames : null,
+    processedLocation.id,
+    processedLocation.name,
+    processedLocation.type,
+    processedLocation.dimension,
   ]);
+}
+
+/**
+ * Process items in parallel with concurrency limit
+ */
+async function processInBatches(items, processFn, batchSize = 10) {
+  const results = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(
+      batch.map(item => processFn(item).catch(error => {
+        console.error(`Error processing item:`, error.message);
+        return null;
+      }))
+    );
+    results.push(...batchResults.filter(r => r !== null));
+  }
+  return results;
 }
 
 /**
@@ -393,38 +459,54 @@ async function syncData() {
     const characters = await fetchAllCharacters();
     const locations = await fetchAllLocations();
     
-    // Store characters
-    console.log(`\n📝 Storing ${characters.length} characters in database...`);
+    // Process and store characters sequentially to avoid rate limits
+    console.log(`\n📝 Processing ${characters.length} characters...`);
+    console.log('  Processing sequentially to avoid rate limits (this may take a while due to image analysis)...');
+    
     let stored = 0;
     for (const character of characters) {
       try {
-        await storeCharacter(client, character);
+        // Process character (image analysis + embedding) sequentially
+        const processedCharacter = await processCharacter(character);
+        
+        // Store in database
+        await storeCharacter(client, processedCharacter);
+        
         stored++;
-        if (stored % 50 === 0) {
-          console.log(`  Stored ${stored}/${characters.length} characters...`);
+        if (stored % 10 === 0 || stored === characters.length) {
+          console.log(`  Processed and stored ${stored}/${characters.length} characters...`);
         }
-        // Small delay to avoid rate limiting on embeddings and vision API
-        await new Promise(resolve => setTimeout(resolve, 100));
       } catch (error) {
-        console.error(`Error storing character ${character.id} (${character.name}):`, error.message);
+        console.error(`Error processing character ${character.id} (${character.name}):`, error.message);
       }
     }
     console.log(`✅ Stored ${stored} characters\n`);
     
-    // Store locations
-    console.log(`📝 Storing ${locations.length} locations in database...`);
+    // Process and store locations in parallel batches
+    console.log(`📝 Processing ${locations.length} locations...`);
+    
+    // Process locations in batches (higher concurrency since no image analysis)
+    const processedLocations = await processInBatches(
+      locations,
+      processLocation,
+      15 // Higher batch size for locations
+    );
+    
+    console.log(`  Processed ${processedLocations.length} locations, storing in database...`);
+    
+    // Store locations in batches
     stored = 0;
-    for (const location of locations) {
-      try {
-        await storeLocation(client, location);
-        stored++;
-        if (stored % 20 === 0) {
-          console.log(`  Stored ${stored}/${locations.length} locations...`);
-        }
-        // Small delay to avoid rate limiting on embeddings and vision API
-        await new Promise(resolve => setTimeout(resolve, 100));
-      } catch (error) {
-        console.error(`Error storing location ${location.id} (${location.name}):`, error.message);
+    const storeBatchSize = 20;
+    for (let i = 0; i < processedLocations.length; i += storeBatchSize) {
+      const batch = processedLocations.slice(i, i + storeBatchSize);
+      await Promise.all(
+        batch.map(pl => storeLocation(client, pl).catch(error => {
+          console.error(`Error storing location ${pl.id} (${pl.name}):`, error.message);
+        }))
+      );
+      stored += batch.length;
+      if (stored % 50 === 0 || stored === processedLocations.length) {
+        console.log(`  Stored ${stored}/${processedLocations.length} locations...`);
       }
     }
     console.log(`✅ Stored ${stored} locations\n`);
@@ -432,10 +514,10 @@ async function syncData() {
     console.log('🎉 Data sync complete!');
     
     // Print summary
-    const charCount = await client.query('SELECT COUNT(*) FROM characters');
-    const locCount = await client.query('SELECT COUNT(*) FROM locations');
-    const charWithEmbedding = await client.query('SELECT COUNT(*) FROM characters WHERE embedding IS NOT NULL');
-    const locWithEmbedding = await client.query('SELECT COUNT(*) FROM locations WHERE embedding IS NOT NULL');
+    const charCount = await client.query("SELECT COUNT(*) FROM entities WHERE entity_type = 'character'");
+    const locCount = await client.query("SELECT COUNT(*) FROM entities WHERE entity_type = 'location'");
+    const charWithEmbedding = await client.query("SELECT COUNT(*) FROM entities WHERE entity_type = 'character' AND embedding IS NOT NULL");
+    const locWithEmbedding = await client.query("SELECT COUNT(*) FROM entities WHERE entity_type = 'location' AND embedding IS NOT NULL");
     
     console.log('\n📊 Database Summary:');
     console.log(`  Characters: ${charCount.rows[0].count} (${charWithEmbedding.rows[0].count} with embeddings)`);

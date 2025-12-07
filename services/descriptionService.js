@@ -5,7 +5,7 @@ import { generateWithLLM } from './llmService.js';
 dotenv.config();
 
 const graphqlClient = new GraphQLClient(
-  process.env.RICK_AND_MORTY_GRAPHQL_URL || 'https://rickandmortyapi.com/graphql'
+  process.env.RICK_AND_MORTY_GRAPHQL_URL
 );
 
 // Template configuration name - defined in config/llm-config.json
@@ -97,9 +97,8 @@ export async function generateLocationDescription(locationId) {
   try {
     description = await generateWithLLM(TEMPLATE_CONFIG_NAME, promptData);
   } catch (error) {
-    // Fallback description if LLM fails
-    console.error('LLM generation failed, using fallback:', error);
-    description = generateFallbackDescription(locationData, residents, totalResidents);
+    console.error('LLM generation failed:', error);
+    throw error;
   }
 
   // Return both the description and metadata for evaluation
@@ -109,13 +108,3 @@ export async function generateLocationDescription(locationId) {
     promptData,
   };
 }
-
-function generateFallbackDescription(locationData, residents, totalResidents) {
-  const residentCount = totalResidents || residents.length;
-  const aliveCount = residents.filter((r) => r.status === 'Alive').length;
-  const deadCount = residents.filter((r) => r.status === 'Dead').length;
-  const speciesTypes = [...new Set(residents.map((r) => r.species))];
-
-  return `${locationData.name} is a ${locationData.type} located in the ${locationData.dimension} dimension. This location is home to ${residentCount} known residents${residents.length > 0 ? `, with ${aliveCount} currently alive and ${deadCount} deceased` : ''}. ${speciesTypes.length > 0 ? `The population includes various species such as ${speciesTypes.slice(0, 3).join(', ')}${speciesTypes.length > 3 ? ', and more' : ''}.` : ''} This location represents another fascinating corner of the multiverse explored by Rick and Morty.`;
-}
-

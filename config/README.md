@@ -119,7 +119,7 @@ const model = getModelForTemplate(templateName);
 
 ## Notes
 
-- The `model` field supports any provider/model supported by Litellm
+- The `model` field supports Groq models (e.g., `llama-3.3-70b-versatile`)
 - If a configuration is not found, the system falls back to environment variables
 - `max_tokens: null` means the model will use its default maximum
 - Prompt template references must match template names in the prompts directory
