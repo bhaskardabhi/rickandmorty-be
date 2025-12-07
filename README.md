@@ -2,6 +2,10 @@
 
 Backend service for generating character and location descriptions, evaluations, and semantic search using LLM models and vector embeddings.
 
+## Demo
+
+Watch the demo video: [YouTube Demo](https://www.youtube.com/watch?v=8hYPYQutoio)
+
 ## Features
 
 - **Location Description Generation**: Generates creative descriptions about locations in the Rick and Morty universe
@@ -446,4 +450,8 @@ const model = getModelForTemplate(templateName);
 - If a configuration is not found, the system falls back to environment variables
 - `max_tokens: null` means the model will use its default maximum
 - Prompt template references must match template names in the prompts directory
+
+## Development Notes
+
+**Git Workflow**: This project was developed as a small, solo project, and commits were made directly to the `master` branch for simplicity. While this approach worked well for a single-developer project, it's worth noting that in team environments or production settings, it's generally recommended to use feature branches, pull requests, and a more structured git workflow to facilitate code review, collaboration, and maintain a stable main branch.
 
